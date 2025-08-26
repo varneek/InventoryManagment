@@ -43,7 +43,7 @@ To toggle activate and deactivate the data use:- /{id}/toggle
 
 ## Example Requests
 
-Add a Product:-
+### Add a Product:-
 
 POST /api/Product/CreateProduct
 
@@ -64,10 +64,10 @@ Content-Type: Body/json
   
 }
 
-Toggle Product Active Status:-
+### Toggle Product Active Status:-
 
 PATCH /5/toggle
 
-Search Products by Id:-
+### Search Products by Id:-
 
 GET /api/Product/search?id=5
