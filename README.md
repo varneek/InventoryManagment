@@ -71,3 +71,6 @@ PATCH /5/toggle
 ### Search Products by Id:-
 
 GET /api/Product/search?id=5
+
+To Check if the api is working or not you can use Postman application!!
+
