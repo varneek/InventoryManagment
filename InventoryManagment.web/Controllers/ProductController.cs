@@ -104,6 +104,24 @@ namespace InventoryManagment.web.Controllers
 
             return Ok(product);
         }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchProducts([FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest("Search term cannot be empty");
+            }
+            var products = await db.Products
+                .Where(p => p.Name.Contains(name)) 
+                .ToListAsync();
+
+            if (products == null || !products.Any())
+                return NotFound($"No products found matching '{name}'");
+
+            return Ok(products);
+        }
+
     }
 }
 
