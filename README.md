@@ -76,3 +76,9 @@ GET /api/Product/search?id=5
 
 To Check if the api is working or not you can use Postman application!!
 
+# Postman Collection
+
+A Postman collection is included:
+
+https://varneek-nagar2-3144184.postman.co/workspace/Varneek-Nagar's-Workspace~03ae9b68-cddf-4969-8d54-2d8af8fa81c2/collection/48025099-ba876977-4e74-4908-ba10-8d1668cceb1c?action=share&creator=48025099
+
