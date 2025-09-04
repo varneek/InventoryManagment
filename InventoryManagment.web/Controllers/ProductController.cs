@@ -19,24 +19,41 @@ namespace InventoryManagment.web.Controllers
         }
         [HttpGet]
         [Route("api/Product/GetAllProducts")]
-        public async Task<IActionResult> GetAllProducts(string? category, string? sortOrder)
+        public async Task<IActionResult> GetAllProducts(string? category)
         {
-            var query = db.Products.AsQueryable();
+            var query = db.Products.Where(p => p.IsActive).AsQueryable();
 
             if (!string.IsNullOrEmpty(category))
             {
                 query = query.Where(p => p.Category == category);
             }
 
-            if (!string.IsNullOrEmpty(sortOrder))
+            var products = await query.ToListAsync();
+            if (!products.Any())
             {
-                if (sortOrder.ToLower() == "asc")
-                    query = query.OrderBy(p => p.Price);
-                else if (sortOrder.ToLower() == "desc")
-                    query = query.OrderByDescending(p => p.Price);
+                return NotFound(new { Message = "No active products found." });
+            }
+
+            return Ok(products);
+        }
+
+        [HttpGet]
+        [Route("api/Product/GetAllInactiveProducts")]
+        public async Task<IActionResult> GetAllInactiveProducts(string? category)
+        {
+            var query = db.Products.Where(p => !p.IsActive).AsQueryable();
+
+            if (!string.IsNullOrEmpty(category))
+            {
+                query = query.Where(p => p.Category == category);
             }
 
             var products = await query.ToListAsync();
+            if (!products.Any())
+            {
+                return NotFound(new { Message = "No Inactive products found." });
+            }
+
             return Ok(products);
         }
 
@@ -44,25 +61,30 @@ namespace InventoryManagment.web.Controllers
         [Route("api/Product/GetProductById")]
         public async Task<IActionResult> GetProductById(int id)
         {
-            var product = await db.Products.FindAsync(id);
+            var product = await db.Products
+                .Where(p => p.IsActive && p.Id == id)
+                .FirstOrDefaultAsync();
+
             if (product == null)
             {
-                return NotFound();
+                return NotFound(new { Message = "Product not found or inactive." });
             }
             return Ok(product);
         }
+
         [HttpPost]
         [Route("api/Product/CreateProduct")]
         public async Task<IActionResult> CreateProduct(Product obj)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest("Model State is not valid");
+                return BadRequest(new { Message = "Model state is not valid." });
             }
+            obj.IsActive = true;
             db.Products.Add(obj);
             await db.SaveChangesAsync();
 
-            return Ok(obj);
+            return Ok(new { Message = $"Product created successfully with Id = {obj.Id}"});
         }
 
         [HttpPut]
@@ -71,57 +93,58 @@ namespace InventoryManagment.web.Controllers
         {
             if (id != obj.Id)
             {
-                return BadRequest("Id is not valid");
+                return BadRequest(new { Message = "Id in URL does not match the product Id." });
             }
             db.Entry(obj).State = EntityState.Modified;
             await db.SaveChangesAsync();
-            return Ok(obj);
+            return Ok(new { Message = "Product updated successfully."});
         }
+
         [HttpDelete]
         [Route("api/Product/DeleteProduct")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var product = await db.Products.FindAsync(id);
-            if (product == null)
+            if (product == null || product.IsActive)
             {
-                return NotFound();
+                return NotFound(new { Message = "Product not found or active." });
             }
             db.Products.Remove(product);
             await db.SaveChangesAsync();
-            return Ok(product);
+            return Ok(new { Message = "Product deleted successfully."});
         }
 
-        [HttpPatch("{id}/toggle")]
+        [HttpPatch("toggle/{id}")]
         public async Task<IActionResult> ToggleProductIsActive([FromRoute] int id)
         {
             var product = await db.Products.FindAsync(id);
             if (product == null)
             {
-                return NotFound(new { Message = "Product not found" });
+                return NotFound(new { Message = "Product not found." });
             }
             product.IsActive = !product.IsActive;
             await db.SaveChangesAsync();
 
-            return Ok(product);
+            return Ok(new { Message = $"Product status is {product.IsActive}"});
         }
 
-        [HttpGet("search")]
+        [HttpGet("Search")]
         public async Task<IActionResult> SearchProducts([FromQuery] string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return BadRequest("Search term cannot be empty");
+                return BadRequest(new { Message = "Search term cannot be empty." });
             }
             var products = await db.Products
-                .Where(p => p.Name.Contains(name)) 
+                .Where(p => p.IsActive && p.Name.Contains(name))
                 .ToListAsync();
 
             if (products == null || !products.Any())
-                return NotFound($"No products found matching '{name}'");
+                return NotFound(new { Message = $"No active products found matching '{name}'." });
 
             return Ok(products);
         }
-
     }
 }
-
+        
+       
