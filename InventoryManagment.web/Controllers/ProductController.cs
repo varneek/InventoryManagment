@@ -84,7 +84,7 @@ namespace InventoryManagment.web.Controllers
             db.Products.Add(obj);
             await db.SaveChangesAsync();
 
-            return Ok(new { Message = $"Product created successfully with Id = {obj.Id}"});
+            return Ok(new { Message = $"Product created successfully", obj.Id});
         }
 
         [HttpPut]
@@ -129,21 +129,33 @@ namespace InventoryManagment.web.Controllers
         }
 
         [HttpGet("Search")]
-        public async Task<IActionResult> SearchProducts([FromQuery] string name)
+        public async Task<IActionResult> SearchProducts([FromQuery] string? name, [FromQuery] string? category)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(category))
             {
-                return BadRequest(new { Message = "Search term cannot be empty." });
+                return BadRequest(new { Message = "You must provide either a name or a category to search." });
             }
-            var products = await db.Products
-                .Where(p => p.IsActive && p.Name.Contains(name))
-                .ToListAsync();
 
-            if (products == null || !products.Any())
-                return NotFound(new { Message = $"No active products found matching '{name}'." });
+            var query = db.Products.Where(p => p.IsActive).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(p => p.Name.Contains(name));
+            }
+
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                query = query.Where(p => p.Category.Contains(category));
+            }
+
+            var products = await query.ToListAsync();
+
+            if (!products.Any())
+                return NotFound(new { Message = "No active products found matching the search criteria." });
 
             return Ok(products);
         }
+
     }
 }
         
