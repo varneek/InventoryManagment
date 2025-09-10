@@ -17,9 +17,10 @@ namespace InventoryManagment.web.Controllers
         {
             this.db = context;
         }
+
         [HttpGet]
         [Route("api/Product/GetAllProducts")]
-        public async Task<IActionResult> GetAllProducts(string? category)
+        public async Task<IActionResult> GetAllProducts(string? category, string? sortBy, string? sortOrder = "asc")
         {
             var query = db.Products.Where(p => p.IsActive).AsQueryable();
 
@@ -27,6 +28,8 @@ namespace InventoryManagment.web.Controllers
             {
                 query = query.Where(p => p.Category == category);
             }
+
+            query = ApplySorting(query, sortBy, sortOrder);
 
             var products = await query.ToListAsync();
             if (!products.Any())
@@ -39,7 +42,7 @@ namespace InventoryManagment.web.Controllers
 
         [HttpGet]
         [Route("api/Product/GetAllInactiveProducts")]
-        public async Task<IActionResult> GetAllInactiveProducts(string? category)
+        public async Task<IActionResult> GetAllInactiveProducts(string? category, string? sortBy, string? sortOrder = "asc")
         {
             var query = db.Products.Where(p => !p.IsActive).AsQueryable();
 
@@ -47,6 +50,8 @@ namespace InventoryManagment.web.Controllers
             {
                 query = query.Where(p => p.Category == category);
             }
+
+            query = ApplySorting(query, sortBy, sortOrder);
 
             var products = await query.ToListAsync();
             if (!products.Any())
@@ -80,11 +85,16 @@ namespace InventoryManagment.web.Controllers
             {
                 return BadRequest(new { Message = "Model state is not valid." });
             }
+            if (!(obj.Price is int))
+            {
+                return BadRequest(new { Message = "The price should be an integer." });
+            }
+
             obj.IsActive = true;
             db.Products.Add(obj);
             await db.SaveChangesAsync();
 
-            return Ok(new { Message = $"Product created successfully", obj.Id});
+            return Ok(new { Message = $"Product created successfully", obj.Id });
         }
 
         [HttpPut]
@@ -97,7 +107,7 @@ namespace InventoryManagment.web.Controllers
             }
             db.Entry(obj).State = EntityState.Modified;
             await db.SaveChangesAsync();
-            return Ok(new { Message = "Product updated successfully."});
+            return Ok(new { Message = "Product updated successfully." });
         }
 
         [HttpDelete]
@@ -111,7 +121,7 @@ namespace InventoryManagment.web.Controllers
             }
             db.Products.Remove(product);
             await db.SaveChangesAsync();
-            return Ok(new { Message = "Product deleted successfully."});
+            return Ok(new { Message = "Product deleted successfully." });
         }
 
         [HttpPatch("toggle/{id}")]
@@ -125,11 +135,12 @@ namespace InventoryManagment.web.Controllers
             product.IsActive = !product.IsActive;
             await db.SaveChangesAsync();
 
-            return Ok(new { Message = $"Product status is {product.IsActive}"});
+            return Ok(new { Message = $"Product status is {product.IsActive}" });
         }
 
         [HttpGet("Search")]
-        public async Task<IActionResult> SearchProducts([FromQuery] string? name, [FromQuery] string? category)
+        public async Task<IActionResult> SearchProducts([FromQuery] string? name, [FromQuery] string? category,
+            [FromQuery] string? sortBy, [FromQuery] string? sortOrder = "asc")
         {
             if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(category))
             {
@@ -148,6 +159,8 @@ namespace InventoryManagment.web.Controllers
                 query = query.Where(p => p.Category.Contains(category));
             }
 
+            query = ApplySorting(query, sortBy, sortOrder);
+
             var products = await query.ToListAsync();
 
             if (!products.Any())
@@ -155,8 +168,21 @@ namespace InventoryManagment.web.Controllers
 
             return Ok(products);
         }
+        private IQueryable<Product> ApplySorting(IQueryable<Product> query, string? sortBy, string? sortOrder)
+        {
+            if (string.IsNullOrEmpty(sortBy))
+                return query; 
 
+            var isDescending = sortOrder?.ToLower() == "desc";
+
+            return sortBy.ToLower() switch
+            {
+                "id" => isDescending ? query.OrderByDescending(p => p.Id) : query.OrderBy(p => p.Id),
+                "name" => isDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
+                "price" => isDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
+                "category" => isDescending ? query.OrderByDescending(p => p.Category) : query.OrderBy(p => p.Category),
+                _ => query
+            };
+        }
     }
 }
-        
-       
