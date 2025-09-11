@@ -12,7 +12,7 @@ namespace InventoryManagment.web.Models
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        [Range(0, double.MaxValue)]
+        [Required(ErrorMessage = "Price is required.")]
         public decimal Price { get; set; }
 
         [Range(0, int.MaxValue)]

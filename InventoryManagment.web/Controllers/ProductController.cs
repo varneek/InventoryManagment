@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Build.Tasks.Deployment.Bootstrapper;
 using Product = InventoryManagment.web.Models.Product;
 using InventoryManagment.web.Models;
+using InventoryManagment.web.Dtos;
 
 namespace InventoryManagment.web.Controllers
 {
@@ -79,34 +80,72 @@ namespace InventoryManagment.web.Controllers
 
         [HttpPost]
         [Route("api/Product/CreateProduct")]
-        public async Task<IActionResult> CreateProduct(Product obj)
+        public async Task<IActionResult> CreateProduct(ProductRequest req)
         {
             if (!ModelState.IsValid)
-            {
+            { 
                 return BadRequest(new { Message = "Model state is not valid." });
             }
-            if (!(obj.Price is int))
+
+            if (!decimal.TryParse(req.Price, out var parsedPrice))
             {
-                return BadRequest(new { Message = "The price should be an integer." });
+                return BadRequest(new { Message = "Price must be a integer." });
             }
 
-            obj.IsActive = true;
-            db.Products.Add(obj);
+            if (!int.TryParse(req.StockQuantity, out var StockQuantity))
+            {
+                return BadRequest(new { Message = "Stock must be a Integer." });
+            }
+
+            var product = new Product
+            {
+                Name = req.Name,
+                Price = parsedPrice,
+                IsActive = true,
+                StockQuantity = StockQuantity,
+                Category = req.Category,
+                Description = req.Description
+            };
+
+            db.Products.Add(product);
             await db.SaveChangesAsync();
 
-            return Ok(new { Message = $"Product created successfully", obj.Id });
+            return Ok(new { Message = "Product created successfully", product.Id });
         }
 
         [HttpPut]
         [Route("api/Product/UpdateProduct")]
-        public async Task<IActionResult> UpdateProduct(int id, Product obj)
+        public async Task<IActionResult> UpdateProduct(ProductResponse res)
         {
-            if (id != obj.Id)
+            if (!int.TryParse(res.Id, out var id))
             {
-                return BadRequest(new { Message = "Id in URL does not match the product Id." });
+                return Ok(new { Message = "Invalid Id" });
             }
-            db.Entry(obj).State = EntityState.Modified;
+
+            if (!decimal.TryParse(res.Price, out var Price))
+            {
+                return BadRequest(new { Message = "Price must be a integer." });
+            }
+
+            if (!int.TryParse(res.StockQuantity, out var StockQuantity))
+            {
+                return BadRequest(new { Message = "Stock must be a Integer." });
+            }
+
+            var product = await db.Products.FindAsync(id);
+            if (product == null)
+                return NotFound(new { Message = "Product not found." });
+
+
+            product.Name = res.Name;
+            product.Price = Price;
+            product.StockQuantity = StockQuantity;
+            product.Category = res.Category;
+            product.Description = res.Description;
+
+
             await db.SaveChangesAsync();
+
             return Ok(new { Message = "Product updated successfully." });
         }
 
