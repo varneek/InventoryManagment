@@ -114,10 +114,10 @@ namespace InventoryManagment.web.Controllers
         }
 
         [HttpPut]
-        [Route("api/Product/UpdateProduct")]
-        public async Task<IActionResult> UpdateProduct(ProductResponse res)
+        [Route("api/Product/UpdateProduct/{id}")]
+        public async Task<IActionResult> UpdateProduct([FromBody] ProductResponse res, [FromRoute]OnlyId ids)
         {
-            if (!int.TryParse(res.Id, out var id))
+            if (!int.TryParse(ids.Id, out var id))
             {
                 return Ok(new { Message = "Invalid Id" });
             }
@@ -206,6 +206,36 @@ namespace InventoryManagment.web.Controllers
                 return NotFound(new { Message = "No active products found matching the search criteria." });
 
             return Ok(products);
+        }
+
+        [HttpGet]
+        [Route("api/Product/Alert")]
+        public async Task<IActionResult> StockAlert([FromQuery] stockqty stock)
+        {
+            if (stock.StockQuantity == null)
+            {
+                return BadRequest(new { Message = "StockQuantity is required." });
+            }
+            if (!int.TryParse(stock.StockQuantity, out var stockThreshold))
+            {
+                return BadRequest(new { Message = "Stock must be a valid integer number." });
+            }
+
+            if (stockThreshold <= 0)
+            {
+                return BadRequest(new { Message = "Stock must be greater than zero." });
+            }
+
+            var lowStockProducts = await db.Products
+                                           .Where(p => p.IsActive && p.StockQuantity < stockThreshold)
+                                           .ToListAsync();
+
+            if (!lowStockProducts.Any())
+            {
+                return Ok(new { Message = "No products are below the given stock." });
+            }
+
+            return Ok(lowStockProducts);
         }
         private IQueryable<Product> ApplySorting(IQueryable<Product> query, string? sortBy, string? sortOrder)
         {
